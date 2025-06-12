@@ -1,7 +1,10 @@
 import random
 from common.chat_models import AssistantResponse
 import google.generativeai as genai
+from dotenv import load_dotenv
 import os
+
+load_dotenv()
 
 GOOGLE_API_KEY=os.environ.get('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
