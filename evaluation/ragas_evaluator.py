@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any, List, Optional
 from ragas.metrics import (
     answer_relevancy,
@@ -6,8 +7,10 @@ from ragas.metrics import (
     answer_similarity,
 )
 from ragas import evaluate
+from ragas.llms import LangchainLLMWrapper
 from datasets import Dataset
 import numpy as np
+from langchain_google_vertexai import ChatVertexAI
 
 class RagasEvaluator:
     """
@@ -91,11 +94,16 @@ class RagasEvaluator:
         if metrics_to_use:  # Only evaluate if we have metrics to run
             # Run evaluation
             try:
+                print(f"\n 🧪 Evaluating with metrics: {[m.name for m in metrics_to_use]}")
+                
+                # Evaluate using RAGAS
                 result = evaluate(
                     dataset=dataset,
                     metrics=metrics_to_use,
-                    raise_exceptions=False
+                    raise_exceptions=False,
                 )
+                
+                print(f"\n ✅ result", result)
                 
                 # Convert to a simple dictionary of scores
                 for metric in metrics_to_use:
@@ -104,6 +112,7 @@ class RagasEvaluator:
                         scores[metric_name] = float(np.mean(result[metric_name]))
             except Exception as e:
                 # If evaluation fails, we'll return an empty dict and let the caller handle it
+                print(f"\n 🔥🔥 evaluation failed", e)
                 pass
         
         return scores

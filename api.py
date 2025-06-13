@@ -38,30 +38,6 @@ async def messages(request: ChatRequest):
 
     return response
 
-async def get_response_with_rag(question: str):
-    """Get response using RAG assistant."""
-    response_id = str(uuid4())
-    now = datetime.utcnow()
-    
-    # Get response from RAG assistant
-    # TODO: Implement the actual RAG retrieval logic
-    assistant_response = await get_rag_assistant_response(question)
-    
-    # Prepare the response
-    assistant_msg = Message(content=assistant_response.content, format="text")
-    candidate = Candidate(
-        message=assistant_msg,
-        rag=assistant_response.rag if assistant_response.rag else None,
-    )
-    
-    chat_response = ChatResponse(
-        id=response_id,
-        created=now,
-        candidates=[candidate],
-    )
-    
-    return chat_response, assistant_response
-
 @app.post("/evaluate")
 async def evaluate_response(request: ChatRequest):
     """
@@ -71,9 +47,24 @@ async def evaluate_response(request: ChatRequest):
     The evaluation includes metrics like answer relevancy and context relevancy.
     """
     try:
+        response_id = str(uuid4())
+        now = datetime.now(timezone.utc)
+    
         # Get response from RAG assistant
-        chat_response, assistant_response = await get_response_with_rag(request.message)
+        assistant_response = await get_rag_assistant_response(request.message)
+    
+        # Prepare the response
+        assistant_msg = Message(content=assistant_response.content, format="text")
+        candidate = Candidate(
+            message=assistant_msg,
+            rag=assistant_response.rag if assistant_response.rag else None,
+        )
         
+        chat_response = ChatResponse(
+            id=response_id,
+            created=now,
+            candidates=[candidate],
+        )
         # Extract contexts for evaluation if available
         contexts = []
         if assistant_response.rag:
@@ -84,6 +75,8 @@ async def evaluate_response(request: ChatRequest):
         evaluation_error = None
         
         try:
+            print(f"begin evaluation ...")
+            
             evaluation = ragas_evaluator.evaluate_response(
                 question=request.message,
                 answer=assistant_response.content,
