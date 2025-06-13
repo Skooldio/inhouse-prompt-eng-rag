@@ -64,7 +64,7 @@ async def get_assistant_response(user_prompt: str):
             'source': metadata.get('source', 'unknown'),
             'title': metadata.get('title', metadata.get('source', 'Document')),
             'score': float(metadata.get('score', 0.0)) if 'score' in metadata else None,
-            'page_content': doc.page_content
+            'page_content': doc.page_content.replace("\n", " ")
         })
     
     # Create RAG output

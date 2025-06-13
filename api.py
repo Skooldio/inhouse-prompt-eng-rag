@@ -5,7 +5,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-from evaluation.ragas_evaluator import RagasEvaluator
+from evaluation.ragas_evaluator import evaluate_rag_response
 from common.eval_models import EvaluationResponse
 from common.chat_models import (
     ChatRequest,
@@ -17,7 +17,6 @@ from common.chat_models import (
 load_dotenv()
 
 app = FastAPI()
-ragas_evaluator = RagasEvaluator()
 
 @app.post("/messages")
 async def messages(request: ChatRequest):
@@ -75,13 +74,17 @@ async def evaluate_response(request: ChatRequest):
         evaluation_error = None
         
         try:
-            print(f"begin evaluation ...")
+            print(f"Question: {request.message}")
+            print(f"Answer: {assistant_response.content}")
             
-            evaluation = ragas_evaluator.evaluate_response(
+            if not contexts:
+                raise ValueError("No contexts available for evaluation.")
+            
+            print("Evaluating response with RAGAS metrics...")
+            evaluation = evaluate_rag_response(
                 question=request.message,
                 answer=assistant_response.content,
                 contexts=contexts,
-                ground_truth=None
             )
         except Exception as e:
             evaluation_error = f"Evaluation partially failed: {str(e)}"
