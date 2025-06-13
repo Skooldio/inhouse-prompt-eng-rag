@@ -2,7 +2,7 @@ import streamlit as st
 import asyncio
 import time
 from dotenv import load_dotenv
-from chat_agent.basic_llm import get_assistant_response
+from chat_agent.llm_retrieval import get_assistant_response
 
 load_dotenv()
 
