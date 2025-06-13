@@ -8,10 +8,6 @@ from ragas.metrics import (
 from ragas import evaluate
 from datasets import Dataset
 import numpy as np
-from typing import List, Dict, Optional
-from ragas import evaluate
-from datasets import Dataset
-import numpy as np
 
 class RagasEvaluator:
     """
