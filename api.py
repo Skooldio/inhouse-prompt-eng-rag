@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from chat_agent.basic_llm import get_assistant_response
 from chat_agent.llm_retrieval import get_assistant_response as get_rag_assistant_response
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from evaluation.ragas_evaluator import RagasEvaluator
@@ -22,7 +22,7 @@ ragas_evaluator = RagasEvaluator()
 @app.post("/messages")
 async def messages(request: ChatRequest):
     response_id = str(uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     assistant_response = await get_assistant_response(request.message)
     assistant_msg = Message(content=assistant_response.content, format="text")
     candidate = Candidate(
