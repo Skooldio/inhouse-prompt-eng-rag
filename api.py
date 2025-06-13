@@ -1,8 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from chat_agent.basic_llm import get_assistant_response
+from chat_agent.llm_retrieval import get_assistant_response as get_rag_assistant_response
 from uuid import uuid4
 from datetime import datetime
 from dotenv import load_dotenv
+
+from evaluation.ragas_evaluator import RagasEvaluator
+from common.eval_models import EvaluationResponse
 from common.chat_models import (
     ChatRequest,
     ChatResponse,
@@ -13,6 +17,7 @@ from common.chat_models import (
 load_dotenv()
 
 app = FastAPI()
+ragas_evaluator = RagasEvaluator()
 
 @app.post("/messages")
 async def messages(request: ChatRequest):
@@ -32,6 +37,73 @@ async def messages(request: ChatRequest):
     )
 
     return response
+
+async def get_response_with_rag(question: str):
+    """Get response using RAG assistant."""
+    response_id = str(uuid4())
+    now = datetime.utcnow()
+    
+    # Get response from RAG assistant
+    # TODO: Implement the actual RAG retrieval logic
+    assistant_response = await get_rag_assistant_response(question)
+    
+    # Prepare the response
+    assistant_msg = Message(content=assistant_response.content, format="text")
+    candidate = Candidate(
+        message=assistant_msg,
+        rag=assistant_response.rag if assistant_response.rag else None,
+    )
+    
+    chat_response = ChatResponse(
+        id=response_id,
+        created=now,
+        candidates=[candidate],
+    )
+    
+    return chat_response, assistant_response
+
+@app.post("/evaluate")
+async def evaluate_response(request: ChatRequest):
+    """
+    Endpoint that returns both the RAG assistant response and RAGAS evaluation metrics.
+    
+    This endpoint first gets the RAG assistant's response and then evaluates it using RAGAS metrics.
+    The evaluation includes metrics like answer relevancy and context relevancy.
+    """
+    try:
+        # Get response from RAG assistant
+        chat_response, assistant_response = await get_response_with_rag(request.message)
+        
+        # Extract contexts for evaluation if available
+        contexts = []
+        if assistant_response.rag:
+            contexts = [doc.page_content for doc in assistant_response.rag.retrieved_documents]
+        
+        # Evaluate the response using RAGAS (without answer_similarity since we don't have ground truth)
+        evaluation = {}
+        evaluation_error = None
+        
+        try:
+            evaluation = ragas_evaluator.evaluate_response(
+                question=request.message,
+                answer=assistant_response.content,
+                contexts=contexts,
+                ground_truth=None
+            )
+        except Exception as e:
+            evaluation_error = f"Evaluation partially failed: {str(e)}"
+        
+        return EvaluationResponse(
+            chat_response=chat_response,
+            evaluation=evaluation if evaluation else None,
+            evaluation_error=evaluation_error
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing request: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
