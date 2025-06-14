@@ -5,6 +5,10 @@ from google.oauth2 import service_account
 from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_chroma import Chroma
 import google.generativeai as genai
+from langchain_google_community import (
+    VertexAISearchRetriever,
+)
+
 
 from dotenv import load_dotenv
 import os
@@ -20,14 +24,6 @@ saCredentials = service_account.Credentials.from_service_account_file(
     filename="./service_account.json"
 )
 
-embeddings = VertexAIEmbeddings(model="text-embedding-004", credentials=saCredentials)
-
-
-vector_store = Chroma(
-    collection_name="rag_collection",
-    embedding_function=embeddings,
-    persist_directory="./chroma_langchain_db",
-)
 
 # llm = init_chat_model(
 #     "gemini-2.0-flash", model_provider="google_vertexai", credentials=saCredentials
@@ -49,7 +45,18 @@ Helpful Answer:"""
 
 custom_rag_prompt = PromptTemplate.from_template(template)
 
-retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={"k": 10})
+PROJECT_ID = "skooldio-prompt-eng-and-rag"  # Set to your Project ID
+LOCATION_ID = "global"  # Set to your data store location
+SEARCH_ENGINE_ID = "sony-rag-2_1749890734353"  # Set to your search app ID
+DATA_STORE_ID = "sony-tech-ds-2_1749890782138"  # Set to your data store ID
+
+retriever = VertexAISearchRetriever(
+    credentials=saCredentials,
+    project_id=PROJECT_ID,
+    location_id=LOCATION_ID,
+    data_store_id=DATA_STORE_ID,
+    engine_data_type=0,
+)
 
 
 async def get_assistant_response(user_prompt: str):
@@ -58,8 +65,8 @@ async def get_assistant_response(user_prompt: str):
     print(f"Retrieved {len(retrieved_docs)} documents for the query: {user_prompt}")
 
     docs_content = "\n\n".join(doc.page_content for doc in retrieved_docs)
-
-    prompt = custom_rag_prompt.invoke( 
+    print(f"Documents content: {docs_content}")
+    prompt = custom_rag_prompt.invoke(
         {"question": user_prompt, "context": docs_content}
     )
 
