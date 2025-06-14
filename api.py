@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from chat_agent.basic_llm import get_assistant_response
+from chat_agent.llm_retrieval import get_assistant_response
 from uuid import uuid4
 from datetime import datetime
 from dotenv import load_dotenv
@@ -13,6 +13,7 @@ from common.chat_models import (
 load_dotenv()
 
 app = FastAPI()
+
 
 @app.post("/messages")
 async def messages(request: ChatRequest):
@@ -36,4 +37,5 @@ async def messages(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
